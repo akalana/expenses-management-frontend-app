@@ -61,14 +61,15 @@ export const authOptions: AuthOptions = {
      * @param token - The token containing user and authentication data.
      * @returns The extended session object with token and user data.
      */
-    session({  token }) {
+    session({ token }) {
       const { user } = token as {
         user: {
-          _id:string;
+          _id: string;
           sub: string;
           email: string;
           firstName: string;
           lastName: string;
+          maxExpensesLimit: number
         };
       };
       //
@@ -82,7 +83,8 @@ export const authOptions: AuthOptions = {
           lastName: user?.lastName,
           email: user?.email,
           sub: user?.sub,
-          id: user?._id
+          id: user?._id,
+          maxExpensesLimit: user?.maxExpensesLimit
         },
       };
     },

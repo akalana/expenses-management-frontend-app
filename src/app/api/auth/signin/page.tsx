@@ -23,7 +23,7 @@ export default function SignIn() {
     }
     // Redirects to the home page if the user is authenticated
     else if (status === "authenticated") {
-      router.push("/dashboard")
+      router.push("/setup")
     }
   }, [router, status]) // Dependencies: re-run effect when 'router' or 'status' changes
 
