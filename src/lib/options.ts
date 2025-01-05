@@ -34,7 +34,7 @@ export const authOptions: AuthOptions = {
      * @param session - The session object.
      * @returns The updated token or the previous token if valid.
      */
-    async jwt({ token, account, user }) {
+    async jwt({ token, session, account, user, trigger }) {
 
       if (account && user) {
         // 'account' is only available the first time this callback is called on a new session
@@ -44,6 +44,12 @@ export const authOptions: AuthOptions = {
         token.accessTokenExpires = account.expires_at;
         token.refreshTokenExpires = account.refresh_expires_in;
         token.user = user;
+      }
+
+      // Handle token updates if triggered by session update
+      if (trigger === "update" && session) {
+        token.user = session?.user;
+        return token;
       }
 
       if (Date.now() / 1000 < (token.accessTokenExpires as number)) {
@@ -65,6 +71,7 @@ export const authOptions: AuthOptions = {
       const { user } = token as {
         user: {
           _id: string;
+          id?: string,
           sub: string;
           email: string;
           firstName: string;
@@ -83,7 +90,7 @@ export const authOptions: AuthOptions = {
           lastName: user?.lastName,
           email: user?.email,
           sub: user?.sub,
-          id: user?._id,
+          id: user?._id ?? user?.id,
           maxExpensesLimit: user?.maxExpensesLimit
         },
       };

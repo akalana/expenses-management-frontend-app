@@ -1,5 +1,6 @@
 "use client"
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { SessionProvider } from "next-auth/react"
 import React, { ReactNode } from "react"
 
@@ -11,14 +12,20 @@ interface SessionProviderWrapperProps {
 const SessionProviderWrapper: React.FC<SessionProviderWrapperProps> = ({
   children,
 }) => {
-  const refreshInterval = Number(process.env.NEXT_PUBLIC_SESSION_REFRESH_TIME ) || 60 // Fallback to 60 seconds if invalid
+  const [client] = React.useState(
+    new QueryClient({ defaultOptions: { queries: { staleTime: 5000 } } })
+  )
+  //
+  const refreshInterval = Number(process.env.NEXT_PUBLIC_SESSION_REFRESH_TIME) || 60 // Fallback to 60 seconds if invalid
 
   return (
     <SessionProvider
       refetchOnWindowFocus={true}
       refetchInterval={refreshInterval}
     >
-      {children}
+      <QueryClientProvider client={client}>
+        {children}
+      </QueryClientProvider>
     </SessionProvider>
   )
 }

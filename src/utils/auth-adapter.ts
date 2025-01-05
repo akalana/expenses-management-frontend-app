@@ -86,6 +86,10 @@ export default function getSessionAndUsersAuthAdapter() {
     );
     return response.data;
   }
+
+    async function linkAccount(): Promise<void> {
+      console.log("linkAccount")
+    }
   
   // Return all the adapter methods
   return {
@@ -93,6 +97,7 @@ export default function getSessionAndUsersAuthAdapter() {
     getUserByEmail,
     getUserByAccount,
     createUser,
+    linkAccount
   };
   
 }
