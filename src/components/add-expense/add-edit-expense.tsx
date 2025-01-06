@@ -14,7 +14,7 @@ import { DayPicker } from "react-day-picker";
 import 'react-day-picker/dist/style.css';
 import { useCreateExpense } from "@/hooks/expeses/use-create-expense";
 import { useUpdateExpense } from "@/hooks/expeses/use-update-expense";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
 
@@ -23,7 +23,7 @@ const AddExpenseDialog = ({ mode, userId, open, setOpen, totalExpensesAmount, ex
     const { data: session }: any = useSession()
     const createExpense = useCreateExpense(userId);
     const updateExpense = useUpdateExpense(userId, expenseData?._id)
-    
+
 
     const {
         register,
@@ -36,38 +36,46 @@ const AddExpenseDialog = ({ mode, userId, open, setOpen, totalExpensesAmount, ex
             name: "",
             description: "",
             amount: 0,
-            date: expenseData.date ? new Date(expenseData.date) : new Date(),
+            date: new Date(),
         },
     });
     // Update the form values if expenseData is provided
     useEffect(() => {
-        if (expenseData && Object.keys(expenseData).length > 0) {
+        if (mode === 'edit' && expenseData && Object.keys(expenseData).length > 0) {
             reset({
                 name: expenseData.name || "",
                 description: expenseData.description || "",
                 amount: expenseData.amount || 0,
                 date: expenseData.date ? new Date(expenseData.date) : new Date(),
             });
+        } else {
+            reset();
         }
-    }, [expenseData, reset]);
+    }, [expenseData, mode, reset]);
     //
-    const submitHandler = async (data: any) => {
-        if (mode === 'create') {
-            if (session?.user?.maxExpensesLimit > totalExpensesAmount + data.amount) {
+    const checkExpenseLimit = useCallback(
+        (amount: number) => {
+            if (session?.user?.maxExpensesLimit > totalExpensesAmount + amount) {
+                return true;
+            } else {
+                toast.error("Cannot add new expenses, as it exceeds the maximum limit");
+                return false;
+            }
+        },
+        [session?.user?.maxExpensesLimit, totalExpensesAmount]
+    );
+    //
+    const submitHandler = useCallback(async (data: any) => {
+        if (checkExpenseLimit(data.amount)) {
+            if (mode === 'create') {
                 await createExpense.mutateAsync(data);
             } else {
-                toast.error('Can not add the new expenses, Because you exeed the maximum limit');
-            }
-        } else {
-            if (session?.user?.maxExpensesLimit > totalExpensesAmount + data.amount) {
                 await updateExpense.mutateAsync(data);
-            } else {
-                toast.error('Can not add the new expenses, Because you exeed the maximum limit');
             }
+            reset();
+            setOpen(false);
         }
-        reset();
-        setOpen(false);
-    };
+    }, [checkExpenseLimit, createExpense, updateExpense, mode, reset, setOpen]);
     //
     return (
         <Dialog open={open} onOpenChange={setOpen}>

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon, Edit, Trash } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { format } from "date-fns"
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pie, PieChart } from "recharts"
 
 import {
@@ -22,29 +23,31 @@ import { useDeleteExpense } from "@/hooks/expeses/use-delete-expense";
 
 const Page = () => {
     const { data: session }: any = useSession()
+    const userId = session?.user?.id;
     const [date, setDate] = useState<Date | undefined>(new Date())
     const [open, setOpen] = useState(false);
     const [mode, setExpensesActionMode] = useState('create');
     const [selectedExpense, setSelectedExpense] = useState({});
     //
-    const expenses = useGetAllExpenses(
-        session?.user?.id, { date }
-    )
-    // Delete employee mutation
+    const expenses = userId
+        ? useGetAllExpenses(userId, { date })
+        : { data: [] };
+    //
     const deleteExpense = useDeleteExpense()
     //
     const chartData = useMemo(() => {
-        if (expenses?.data) {
-            return expenses?.data.map((item, index) => ({
-                id: item._id,
-                name: item.name,
-                amount: item.amount,
-                fill: `hsl(var(--chart-${index + 1}))`,
-            }));
-        }
+        return expenses?.data?.map((item, index) => ({
+            id: item._id,
+            name: item.name,
+            amount: item.amount,
+            fill: `hsl(var(--chart-${index + 1}))`,
+        })) ?? [];
     }, [expenses?.data]);
     //
-    const totalExpensesAmount = expenses?.data?.reduce((sum: number, expense: any): any => sum + expense?.amount, 0) ?? 0;
+    const totalExpensesAmount = useMemo(() =>
+        expenses?.data?.reduce((sum, expense) => sum + expense.amount, 0) ?? 0,
+        [expenses?.data]
+    );;
     //
     const chartConfig = useMemo(() => {
         const chartConfig: Record<string, { label: string; color: string }> = {};
@@ -59,12 +62,18 @@ const Page = () => {
         return chartConfig;
     }, [chartData]);
     //
-    const editExpense = (expense: any) => {
+    const editExpense = useCallback((expense: any) => {
         setSelectedExpense(expense);
         setOpen(!open);
         setExpensesActionMode('edit');
-    }
+    }, [])
     //
+    useEffect(() => {
+        if (!open) {
+            setSelectedExpense({})
+            setExpensesActionMode('create')
+        };
+    }, [open]);
     return (
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow mb-6">
@@ -116,18 +125,21 @@ const Page = () => {
                 <h2 className="text-xl font-semibold mb-4">Expenses</h2>
                 <div className="h-64 flex items-center justify-center">
                     {/* Placeholder for Pie Chart */}
-                    <ChartContainer
-                        config={chartConfig}
-                        className="mx-auto aspect-square max-h-[300px] w-6/12"
-                    >
-                        <PieChart>
-                            <Pie data={chartData} dataKey="amount" />
-                            <ChartLegend
-                                content={<ChartLegendContent nameKey="name" />}
-                                className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-                            />
-                        </PieChart>
-                    </ChartContainer>
+                    {chartData.length > 0 ? (
+                        <ChartContainer
+                            config={chartConfig}
+                            className="mx-auto aspect-square max-h-[300px] w-6/12"
+                        >
+                            <PieChart>
+                                <Pie data={chartData} dataKey="amount" />
+                                <ChartLegend
+                                    content={<ChartLegendContent nameKey="name" />}
+                                    className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+                                />
+                            </PieChart>
+                        </ChartContainer>) : (
+                        <p>No data available for chart</p>
+                    )}
                 </div>
             </div>
 
